@@ -1,5 +1,45 @@
 """
-PLACEHOLDER - To be modified
+NBA Statistics Web Scraper
+==========================
+
+This script creates an autonomous agent that uses LangChain and OpenAI to gather, 
+process, and store up-to-date NBA statistics from web searches.
+
+Functionality:
+-------------
+1. Uses DuckDuckGo search to find the latest NBA statistics and game results
+2. Leverages GPT-4o to extract structured data from search results
+3. Collects multiple statistical categories (points, rebounds, assists, etc.)
+4. Processes data into structured JSON format
+5. Saves results to both JSON and CSV files for later analysis
+6. Provides an interactive command-line interface for viewing results
+
+Key Components:
+--------------
+- LLM Integration: Uses ChatOpenAI (GPT-4o) for natural language processing
+- Search Tool: DuckDuckGoSearchRun for retrieving web search results
+- Data Extraction: Custom prompt template for parsing unstructured search results
+- Data Storage: Saves compiled statistics to local filesystem
+- User Interface: Interactive CLI for data exploration
+
+Usage:
+------
+Run the script directly to collect the latest NBA statistics:
+$ python sports_data_agent.py
+
+Once running, use the interactive prompt to:
+- view [stat_type]: Display leaders for a specific statistical category
+- refresh: Fetch updated statistics
+- exit: Terminate the program
+
+Dependencies:
+------------
+- langchain and langchain_openai: For LLM integration and agent creation
+- langchain_community.tools: For web search capabilities
+- pandas: For data manipulation and CSV export
+- python-dotenv: For environment variable management
+
+Note: Requires an OpenAI API key stored in an .env file.
 """
 
 # NBA Stats Web Scraper using Langchain and OpenAI
