@@ -2,49 +2,6 @@
 PLACEHOLDER - To be modified
 """
 
-# import os
-# from dotenv import load_dotenv
-
-# load_dotenv()
-
-# from langchain.agents import AgentType, initialize_agent, load_tools
-# from langchain_openai import ChatOpenAI
-# from langchain_community.tools import DuckDuckGoSearchRun
-# from langchain_core.tools import tool
-
-# CHAT_MODEL = "gpt-4o"
-
-# @tool
-# def search_ticker(company_name: str) -> str:
-#     """
-#     Searches for the stock ticker symbol of a given company using DuckDuckGo.
-#     It parses search results specifically checking for entries from MarketWatch.
-#     """
-#     search = DuckDuckGoSearchRun()
-#     search_results = search.run(company_name)
-#     if isinstance(search_results, str):
-#         return search_results
-#     else:
-#         for result in search_results:
-#             try:
-#                 if result["title"] == "Stock Ticker Symbol Lookup - MarketWatch":
-#                     return result["description"].split(" ")[-1]
-#             except:
-#                 print('The result is not a dictionary. The result is {result}'.format(result=result))
-#         return "No ticker found"
-
-# if __name__ == '__main__':
-#     llm = ChatOpenAI(model=CHAT_MODEL)
-#     agent = initialize_agent(
-#         tools=[search_ticker],
-#         llm=llm,
-#         agent_type=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
-#         verbose=True
-#     )
-#     output = agent.run("what is the ticker of Amazon?")
-#     print(output)
-
-###########################
 # NBA Stats Web Scraper using Langchain and OpenAI
 
 import os
@@ -52,11 +9,11 @@ import json
 import pandas as pd
 from datetime import datetime
 from langchain.agents import load_tools, initialize_agent, AgentType
-from langchain.llms import OpenAI
+from langchain_openai import ChatOpenAI
 from langchain.chains import LLMChain
 from langchain.prompts import PromptTemplate
 from langchain.tools import Tool
-from langchain.utilities import GoogleSearchAPIWrapper
+from langchain_community.tools import DuckDuckGoSearchRun
 
 from dotenv import load_dotenv
 
@@ -64,22 +21,16 @@ load_dotenv()
 
 CHAT_MODEL = "gpt-4o"
 
-# Environment setup
-# You'll need to set these environment variables or provide them directly
-# os.environ["OPENAI_API_KEY"] = "your-openai-api-key"
-# os.environ["GOOGLE_API_KEY"] = "your-google-api-key"
-# os.environ["GOOGLE_CSE_ID"] = "your-google-cse-id"
-
 # Initialize the language model
-llm = OpenAI(temperature=0, model_name=CHAT_MODEL)
+llm = ChatOpenAI(temperature=0, model_name=CHAT_MODEL)
 
-# Initialize Google search
-search = GoogleSearchAPIWrapper()
+# Initialize web search
+search = DuckDuckGoSearchRun()
 
 # Create a search tool
 search_tool = Tool(
-    name="Google Search",
-    description="Search Google for recent NBA statistics and scores",
+    name="DuckDuckGo Search",
+    description="Search using DuckDuckGo for recent NBA statistics and scores",
     func=search.run
 )
 
@@ -110,7 +61,7 @@ Please extract the following statistics for the most recent games:
 
 Return the data in a structured JSON format with game date, teams, scores, and player statistics.
 Only include factual information directly from the search results. If certain statistics aren't 
-available, omit them rather than making assumptions.
+available, omit them rather than making assumptions. I repeat!!! ONLY RETURN THE JSON NO EXTRANNEOUS STRING!!
 """
 
 extract_stats_prompt = PromptTemplate(
@@ -122,6 +73,12 @@ extract_stats_chain = LLMChain(
     llm=llm,
     prompt=extract_stats_prompt
 )
+
+def parse_llm_json_return_string(input_string: str):
+    """
+    Helper function to remove extraneous text.
+    """
+    return input_string.replace("`", "").replace("json", "")
 
 # Main function to fetch NBA statistics
 def fetch_nba_stats():
@@ -140,12 +97,17 @@ def fetch_nba_stats():
         search_results=search_results,
         stat_category="general"
     )
+    extraction_result = parse_llm_json_return_string(input_string=extraction_result)
     
     try:
         games_data = json.loads(extraction_result)
         all_stats["games"] = games_data
-    except json.JSONDecodeError:
+    except json.JSONDecodeError as j_error:
         print("Error parsing general game data. Continuing with individual stats...")
+        print('-' * 50)
+        print(f"ERROR: {j_error}")
+        print(f"EXTRACTION RESULT: {extraction_result}")
+        print('-' * 50)
         all_stats["games"] = []
     
     # Fetch specific statistics for each category
@@ -157,12 +119,17 @@ def fetch_nba_stats():
             search_results=search_results,
             stat_category=stat
         )
+        extraction_result = parse_llm_json_return_string(input_string=extraction_result)
         
         try:
             stat_data = json.loads(extraction_result)
             all_stats[stat] = stat_data
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as j_error:
             print(f"Error parsing {stat} data. Skipping this category.")
+            print('-' * 50)
+            print(f"ERROR: {j_error}")
+            print(f"EXTRACTION RESULT: {extraction_result}")
+            print('-' * 50)
             all_stats[stat] = []
     
     # Save the compiled data
